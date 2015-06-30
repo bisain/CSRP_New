@@ -1,0 +1,128 @@
+Bisain Frostbite
+---------------------------------------------------------------------------------------------------------
+
+// from jeff
+
+i386-softmmu/qemu-system-i386 -chardev socket,id=qmp,path=/tmp/qmp,server,nowait -mon chardev=qmp,mode=control -monitor stdio -m 1024 -hda ~/vms/xpsp2-x86.img -net none -machine accel=kvm
+
+// modified
+
+sudo qemu-system-i386 -chardev socket,id=qmp,path=/tmp/qmp,server,nowait -mon chardev=qmp,mode=control -monitor stdio -m 1024 -hda ~/vms/xpsp2-x86.img -net none -machine accel=kvm
+
+// per instructions...
+
+sudo qemu-system-i386 -chardev socket,id=qmp,port=4444,host=localhost,server -mon chardev=qmp,mode=control,pretty=on
+
+// first iteration... unsuccessful :(
+
+sudo qemu-system-i386 -chardev socket,id=qmp,path=/tmp/qmp,port=4444,host=localhost,server -mon chardev=qmp,mode=control -monitor stdio -m 1024 -hda ~/vms/xpsp2-x86.img -net none -machine accel=kvm
+
+// second iteration... THIS WORKED!!!
+
+sudo qemu-system-i386 -chardev socket,id=qmp,port=4444,host=localhost,server -mon chardev=qmp,mode=control -monitor stdio -m 1024 -hda ~/vms/xpsp2-x86.img -net none -machine accel=kvm
+
+// third iteration...PRETTY!!!!!!
+sudo qemu-system-i386 -chardev socket,id=qmp,port=4444,host=localhost,server -mon chardev=qmp,mode=control,pretty=on -monitor stdio -m 1024 -hda ~/vms/xpsp2-x86.img -net none -machine accel=kvm
+
+
+// fourth iteration...BETTER!!!!!
+sudo ./i386-softmmu/qemu-system-i386 -chardev socket,id=qmp,port=4444,host=localhost,server -mon chardev=qmp,mode=control,pretty=on -monitor stdio -m 1024 -hda ~/vms/xpsp2-x86.img -net none -machine accel=kvm
+
+// in other terminal...
+telnet localhost 4444
+
+----------------------------------------------------------------------------------------------------
+// fifth iteration...LESS TYPING!!!!!
+// (be in the following directory... /src/qemu)
+----------------------------------------------------------------------------------------------------
+sudo i386-softmmu/qemu-system-i386 -chardev socket,id=qmp,path=/tmp/qmp,server,nowait -mon chardev=qmp,mode=control -monitor stdio -m 1024 -hda ~/vms/xpsp2-x86.img -net none -machine accel=kvm -qmp unix:./qmp-sock,server
+
+----------------------------------------------------------------------------------------------------
+// in other terminal (be in the following directory... /src/qemu/scripts/qmp)
+----------------------------------------------------------------------------------------------------
+sudo ./qmp-shell ../../qmp-sock
+
+(type "query-commands" for list of commands)
+----------------------------------------------------------------------------------------------------
+
+----------------------------------------------------------------------------------------------------
+// sixth iteration...network connection
+// (be in the following directory... /src/qemu)
+----------------------------------------------------------------------------------------------------
+sudo i386-softmmu/qemu-system-i386 -chardev socket,id=qmp,path=/tmp/qmp,server,nowait -mon chardev=qmp,mode=control -monitor stdio -m 1024 -hda ~/vms/xpsp2-x86.img -net none -machine accel=kvm -qmp unix:./qmp-sock,server -net user -net nic,model=rtl8139
+
+
+// files
+qapi-schema.json
+qmp-commands.h
+qmp-commands.hx
+qmp.c
+frost_qmp.c
+qmp-shell
+README.FROST
+writing-eqmp-commands.txt
+
+// after editing code, build using "make -j $(nproc)" then open up qemu using the fourth iteration command
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+goal: create a new routine that basically mimics frost_net_drop_rst_filter() but instead of changing the data packet, make it so that it flags for certain behavior and provide the user information on that behavior
+
+1. [DONE] create a new hello world test routine to ensure that my new testing method works
+2. [DONE] create hello world input method
+3. [] try everything from the demonstration again by myself
+4. [] create a new void routine, print_packet_info(), and copy/paste frost_net_drop_rst_filter()
+5. [] insert into queue.c
+6. [] modify my new routine so that it returns info if the flag indicates "bad guy"
+
+
+
+---------------------------------------------------------------------------------------------------------
+echo inputs from windows XP terminal to host terminal
+---------------------------------------------------------------------------------------------------------
+- in a new terminal, first find the ip address using "ifconfig"
+- next, i can start a simple TCP echo server which listens for connections on TCP port 5000
+	
+	> nc -l 5000
+
+- in the windows XP VM command line, i can type the following:
+
+	> telnet <IP Address> <Port>
+	ie) ...
+		> telnet 172.16.215.135 5000
+
+	which will now allow me to echo anything i type in here to the terminal in my host machine
+---------------------------------------------------------------------------------------------------------
+output network information (continuation)
+---------------------------------------------------------------------------------------------------------
+- in the QEMU QMP command prompt
+	// the following is used for the network connections
+	> frost-net-drop-rst-add dst=172.16.215.135 dport=5000 sport=0 drop=true src=10.0.2.15 pid=0
+
+- the other terminal (QEMU) should show the dropped packets from A to B
+- goal is for me to change the output to just the info
+	- ie) packet from A to B (more info...)
+
+- can test out new terminal on the mac machine and set up the ip address network connection
+- on the mac, the ip address is probably on "EN3", right after "inet"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
