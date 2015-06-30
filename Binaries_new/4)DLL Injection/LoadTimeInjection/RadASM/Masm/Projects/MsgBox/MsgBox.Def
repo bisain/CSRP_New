@@ -1,0 +1,2 @@
+LIBRARY MsgBox
+EXPORTS TestProc

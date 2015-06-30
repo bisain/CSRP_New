@@ -1,0 +1,2 @@
+LIBRARY   SpyFunc
+EXPORTS   SpyReplace
