@@ -1,0 +1,164 @@
+---------------------------------------------------------------------------------------------------------
+qapi-schema.json
+---------------------------------------------------------------------------------------------------------
+{
+  'command': 'hello-world'
+}
+
+{
+  'command': 'hello-world-new'
+}
+
+{ 'command': 'hello-world-input', 'data': { '*message': 'str' } }
+
+{ 'command': 'print-packet-info-toggle' }
+
+---------------------------------------------------------------------------------------------------------
+frost_qmp.c
+---------------------------------------------------------------------------------------------------------
+
+// Called from net/queue.c:qemu_net_queue_deliver() for each packet
+// that passes through qemu
+void print_packet_info(const uint8_t *data, size_t size)
+{
+	NetDropRstList *cur_list;
+	struct sniff_ethernet *ethernet;
+	struct sniff_ip *ip;
+	struct sniff_tcp *tcp;
+	int size_ip, size_tcp;
+	uint16_t src_port, dst_port;
+	uint32_t pid;
+	char src[20], dst[20];
+
+	// No need to continue if there isn't anything in the RST list
+	if (net_drop_rst_list == NULL)
+	return;
+
+	// Packet must be at least 54 bytes (14 Ethernet + 20 IP + 20 TCP)
+	// to be a valid TCP packet
+	if (size < 54)
+	return;
+
+	// If it's not IP, return
+	ethernet = (struct sniff_ethernet*)(data);
+	if (ethernet->ether_type != ntohs(0x800))
+		return;
+
+	// Define/compute IP header offset
+	ip = (struct sniff_ip*)(data + SIZE_ETHERNET);
+	size_ip = IP_HL(ip)*4;
+	if (size_ip < 20)
+		return;
+
+	// If it's not TCP, return
+	if (ip->ip_p != IPPROTO_TCP)
+		return;
+
+	// Define/computer TCP header offset
+	tcp = (struct sniff_tcp *)(data + SIZE_ETHERNET + size_ip);
+	size_tcp = TH_OFF(tcp) * 4;
+	if (size_tcp < 20)
+		return;
+
+	// Get the 4-tuple that defines this TCP connection's endpoints
+	strncpy(src, inet_ntoa(ip->ip_src), 20);
+	strncpy(dst, inet_ntoa(ip->ip_dst), 20);
+	src_port = ntohs(tcp->th_sport);
+	dst_port = ntohs(tcp->th_dport);
+
+	// FIXME: EVentually get the pid for real via bp
+	pid = 0xBADBAD;
+
+	cur_list = net_drop_rst_list;
+	while (cur_list != NULL)
+	{
+	
+		DEBUG_PRINT(DEBUG, "\nPacket Information: packet from PID %d (%s:%d ---> %s:%d)\n", pid, src, src_port, dst, dst_port);
+
+/*
+		if ((!cur_list->value->dport || cur_list->value->dport == dst_port) &&
+			(!strlen(cur_list->value->dst) || strcmp(dst,cur_list->value->dst) == 0) &&
+			(!cur_list->value->sport || cur_list->value->sport == src_port) &&
+			(!strlen(cur_list->value->src) || strcmp(src,cur_list->value->src) == 0))
+		{
+			if (cur_list->value->drop)
+			{
+				DEBUG_PRINT(DEBUG, "Dropping packet from PID %d (%s:%d ---> %s:%d)", pid, src, src_port, dst, dst_port);
+				return;
+			}
+			DEBUG_PRINT(DEBUG, "Flipping RST bit for packet from PID %d (%s:%d ---> %s:%d)", pid, src, src_port, dst, dst_port);
+			tcp->th_flags |= TH_RST;
+			tcp->th_sum = 0;
+			net_checksum_calculate(data, size);
+			break;
+		}
+*/
+
+		cur_list = cur_list->next;
+	}
+	return;
+}
+
+
+void qmp_hello_world(Error **errp)
+{
+	printf("Hello, world!\n");
+}
+
+void qmp_hello_world_new(Error ** errp)
+{
+	printf("I am alive!\n");
+}
+
+void qmp_hello_world_input(bool has_message, const char *message, Error **errp)
+{
+    if (has_message) {
+        printf("%s\n", message);
+    } else {
+        printf("Hello, world\n");
+    }
+}
+
+void qmp_print_packet_info_toggle(Error **errp)
+{
+	if(printToggle)
+	{
+		printf("\nPrint Packet Information - OFF\n");
+		printToggle = false;
+	}	
+	else
+	{
+		printf("\nPrint Packet Information - ON\n");
+		printToggle = true;
+	}
+	
+}
+
+---------------------------------------------------------------------------------------------------------
+qmp-commands.hx
+---------------------------------------------------------------------------------------------------------
+
+{
+	.name       = "hello-world",
+	.args_type  = "",
+	.mhandler.cmd_new = qmp_marshal_input_hello_world,
+},
+
+{
+	.name       = "hello-world-new",
+	.args_type  = "",
+	.mhandler.cmd_new = qmp_marshal_input_hello_world_new,
+},
+
+{
+        .name       = "hello-world-input",
+        .args_type  = "message:s?",
+        .mhandler.cmd_new = qmp_marshal_input_hello_world_input,
+},
+
+{
+	.name       = "print-packet-info-toggle",
+	.args_type  = "",
+	.mhandler.cmd_new = qmp_marshal_input_print_packet_info_toggle,
+},
+---------------------------------------------------------------------------------------------------------
