@@ -76,11 +76,8 @@ goal: create a new routine that basically mimics frost_net_drop_rst_filter() but
 4. [DONE] create a new void routine, print_packet_info(), and copy/paste frost_net_drop_rst_filter()
 5. [DONE] insert into queue.c
 
-1. [DONE] use introspection on the mac terminal too; distinguished between the different packets 
-2. []
-
-
-6. [] modify my new routine so that it returns info if the flag indicates "bad guy"
+6. [DONE] use introspection on the mac terminal too; distinguished between the different packets 
+7. [DONE] modify my new routine so that it returns info if the flag indicates "bad guy"
 
 
 
